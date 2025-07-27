@@ -12,6 +12,7 @@ const Payment = ({ userResponses, currentUser, setPaymentStatus }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState(null);
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
@@ -21,6 +22,21 @@ const Payment = ({ userResponses, currentUser, setPaymentStatus }) => {
 
   // Get user data from location state or props
   const userData = location.state?.userData || currentUser;
+
+  useEffect(() => {
+    // Fetch payment configuration
+    fetchPaymentConfig();
+  }, []);
+
+  const fetchPaymentConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/payment/config');
+      const config = await response.json();
+      setPaymentConfig(config);
+    } catch (error) {
+      console.error('Failed to fetch payment config:', error);
+    }
+  };
 
   const handlePayment = async (e) => {
     e.preventDefault();
@@ -36,61 +52,41 @@ const Payment = ({ userResponses, currentUser, setPaymentStatus }) => {
         return;
       }
 
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!userData?.id) {
+        setError('User information not found. Please start over.');
+        setLoading(false);
+        return;
+      }
 
-      // Check if it's a test card
-      const cleanCardNumber = cardNumber.replace(/\s/g, '');
-      
-      if (cleanCardNumber === '4242424242424242') {
-        // Success case
-        setSuccess('Payment processed successfully!');
+      // Process demo payment
+      const response = await fetch('http://localhost:5000/api/payment/demo-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userData.id,
+          card_number: cardNumber.replace(/\s/g, ''), // Remove spaces
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(result.message);
         setPaymentStatus && setPaymentStatus(true);
-        
-        // Create payment data for results page
-        const paymentData = {
-          ...userData,
-          has_paid: true,
-          payment_id: 'demo_' + Date.now(),
-          payment_amount: 47.00,
-          payment_date: new Date().toISOString(),
-          responses: userResponses || location.state?.responses || {}
-        };
         
         // Redirect to results page after successful payment
         setTimeout(() => {
           navigate('/results', { 
             state: { 
-              userData: paymentData,
+              userData: { ...userData, has_paid: true, payment_id: result.payment_id },
               paymentSuccess: true
             } 
           });
         }, 2000);
-      } else if (cleanCardNumber === '4000000000000002') {
-        // Decline case
-        setError('Your card was declined. Please try a different payment method.');
       } else {
-        // Other test cards - treat as success
-        setSuccess('Payment processed successfully!');
-        setPaymentStatus && setPaymentStatus(true);
-        
-        const paymentData = {
-          ...userData,
-          has_paid: true,
-          payment_id: 'demo_' + Date.now(),
-          payment_amount: 47.00,
-          payment_date: new Date().toISOString(),
-          responses: userResponses || location.state?.responses || {}
-        };
-        
-        setTimeout(() => {
-          navigate('/results', { 
-            state: { 
-              userData: paymentData,
-              paymentSuccess: true
-            } 
-          });
-        }, 2000);
+        setError(result.error || 'Payment failed. Please try again.');
       }
     } catch (error) {
       setError('Payment processing failed. Please try again.');
@@ -239,14 +235,16 @@ const Payment = ({ userResponses, currentUser, setPaymentStatus }) => {
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-2">Test Mode - Use These Cards:</h4>
-                    <div className="text-sm text-blue-800 space-y-1">
-                      <p><strong>Success:</strong> 4242 4242 4242 4242</p>
-                      <p><strong>Decline:</strong> 4000 0000 0000 0002</p>
-                      <p>Use any future expiry date and any 3-digit CVV</p>
+                  {paymentConfig?.is_mock && (
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2">Demo Mode - Test Cards:</h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p><strong>Success:</strong> 4242 4242 4242 4242</p>
+                        <p><strong>Decline:</strong> 4000 0000 0000 0002</p>
+                        <p>Use any future expiry date and any 3-digit CVV</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -260,7 +258,7 @@ const Payment = ({ userResponses, currentUser, setPaymentStatus }) => {
                     disabled={loading}
                     size="lg"
                   >
-                    {loading ? 'Processing...' : 'Pay $47.00'}
+                    {loading ? 'Processing...' : `Pay ${paymentConfig?.price_display || '$47.00'}`}
                   </Button>
 
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
@@ -286,12 +284,12 @@ const Payment = ({ userResponses, currentUser, setPaymentStatus }) => {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span>Gut Health Analysis</span>
-                  <span className="font-semibold">$47.00</span>
+                  <span className="font-semibold">{paymentConfig?.price_display || '$47.00'}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>$47.00</span>
+                  <span>{paymentConfig?.price_display || '$47.00'}</span>
                 </div>
               </CardContent>
             </Card>

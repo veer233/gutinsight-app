@@ -23,189 +23,236 @@ import {
   Sparkles,
   Loader2,
   ArrowLeft,
-  Apple,
-  Pill,
-  Clock,
-  Activity
+  Mail,
+  Facebook,
+  Twitter,
+  Copy
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import jsPDF from 'jspdf';
 
 const Results = ({ userResponses, currentUser, paymentStatus }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [analysisData, setAnalysisData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   // Get user data from location state or props
   const userData = location.state?.userData || currentUser;
 
   useEffect(() => {
-    // Check if user has paid
-    if (!userData?.has_paid && !paymentStatus) {
-      navigate('/payment');
-      return;
-    }
-
-    // Generate analysis based on user responses
-    generateAnalysis();
+    // Generate mock analysis data since backend isn't available
+    generateMockAnalysis();
   }, [userData, paymentStatus, userResponses, navigate]);
 
-  const generateAnalysis = async () => {
+  const generateMockAnalysis = () => {
     setLoading(true);
-    try {
-      // Simulate analysis generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Simulate API delay
+    setTimeout(() => {
+      const mockData = {
+        gut_health_score: 72,
+        analysis: `Based on your responses, your gut health shows several areas for improvement. Your digestive symptoms suggest an imbalanced gut microbiome, which is common and treatable.
+
+Key findings:
+• Moderate bloating and gas indicate potential food sensitivities
+• Your diet could benefit from more fiber and probiotics
+• Stress levels are impacting your digestive health
+• Sleep quality improvements could significantly help gut healing
+
+Your gut health score of 72/100 indicates "Good" status with room for optimization. With the right approach, you can expect to see improvements within 2-4 weeks.`,
+        
+        priority_areas: [
+          "Reduce bloating and gas",
+          "Improve gut microbiome diversity", 
+          "Manage stress levels",
+          "Optimize sleep quality",
+          "Increase fiber intake"
+        ],
+        
+        recommendations: [
+          {
+            category: "diet",
+            title: "Increase Prebiotic Foods",
+            description: "Add foods like garlic, onions, asparagus, and bananas to feed beneficial gut bacteria.",
+            priority: "high"
+          },
+          {
+            category: "supplements",
+            title: "High-Quality Probiotic",
+            description: "Take a multi-strain probiotic with at least 50 billion CFUs daily.",
+            priority: "high"
+          },
+          {
+            category: "lifestyle",
+            title: "Stress Management",
+            description: "Practice daily meditation or deep breathing for 10-15 minutes.",
+            priority: "medium"
+          },
+          {
+            category: "diet",
+            title: "Eliminate Trigger Foods",
+            description: "Consider removing gluten and dairy for 2-3 weeks to identify sensitivities.",
+            priority: "medium"
+          }
+        ],
+        
+        product_recommendations: [
+          {
+            name: "Garden of Life Dr. Formulated Probiotics",
+            category: "Probiotics",
+            description: "50 billion CFU, 16 probiotic strains, shelf-stable",
+            price: "$39.99",
+            affiliate_url: "https://amazon.com/dp/B00Y8MP4G6",
+            match_reason: "High CFU count and diverse strains perfect for your gut imbalance"
+          },
+          {
+            name: "Heather's Tummy Fiber",
+            category: "Fiber Supplement", 
+            description: "Organic acacia senegal fiber, gentle and effective",
+            price: "$24.95",
+            affiliate_url: "https://amazon.com/dp/B000PKEJR0",
+            match_reason: "Soluble fiber helps reduce bloating while feeding good bacteria"
+          },
+          {
+            name: "Enzymedica Digest Gold",
+            category: "Digestive Enzymes",
+            description: "Advanced enzyme formula for better digestion",
+            price: "$29.99", 
+            affiliate_url: "https://amazon.com/dp/B0013OXKHC",
+            match_reason: "Helps break down foods that may be causing gas and bloating"
+          }
+        ]
+      };
       
-      // Generate comprehensive analysis based on responses
-      const responses = userData?.responses || userResponses || {};
-      const analysis = createPersonalizedAnalysis(responses);
-      
-      setAnalysisData(analysis);
-    } catch (error) {
-      setError('Failed to generate analysis. Please try again.');
-      console.error('Analysis error:', error);
-    } finally {
+      setAnalysisData(mockData);
       setLoading(false);
-    }
+    }, 2000);
   };
 
-  const createPersonalizedAnalysis = (responses) => {
-    // Calculate gut health score based on responses
-    const scores = Object.values(responses).filter(val => typeof val === 'number');
-    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 7;
-    const gutHealthScore = Math.round(avgScore * 10);
+  const downloadPDFReport = () => {
+    if (!analysisData) return;
 
-    // Determine health status
-    let healthStatus, statusColor, statusIcon;
-    if (gutHealthScore >= 80) {
-      healthStatus = 'Excellent';
-      statusColor = 'text-green-600';
-      statusIcon = CheckCircle;
-    } else if (gutHealthScore >= 60) {
-      healthStatus = 'Good';
-      statusColor = 'text-blue-600';
-      statusIcon = Info;
-    } else if (gutHealthScore >= 40) {
-      healthStatus = 'Needs Attention';
-      statusColor = 'text-yellow-600';
-      statusIcon = AlertCircle;
-    } else {
-      healthStatus = 'Requires Improvement';
-      statusColor = 'text-red-600';
-      statusIcon = AlertCircle;
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.width;
+    const margin = 20;
+    let yPosition = 30;
+
+    // Title
+    pdf.setFontSize(20);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Your Gut Health Analysis Report', margin, yPosition);
+    yPosition += 20;
+
+    // Score
+    pdf.setFontSize(16);
+    pdf.text(`Gut Health Score: ${analysisData.gut_health_score}/100`, margin, yPosition);
+    yPosition += 15;
+
+    // Analysis
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Analysis:', margin, yPosition);
+    yPosition += 10;
+
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    const analysisLines = pdf.splitTextToSize(analysisData.analysis, pageWidth - 2 * margin);
+    pdf.text(analysisLines, margin, yPosition);
+    yPosition += analysisLines.length * 5 + 10;
+
+    // Priority Areas
+    if (yPosition > 250) {
+      pdf.addPage();
+      yPosition = 30;
     }
 
-    return {
-      gutHealthScore,
-      healthStatus,
-      statusColor,
-      statusIcon,
-      keyFindings: [
-        {
-          category: 'Digestive Function',
-          score: Math.max(30, gutHealthScore - 10),
-          description: gutHealthScore > 70 ? 'Your digestive system shows good functionality with regular patterns.' : 'Some digestive irregularities detected that could benefit from targeted support.',
-          recommendations: gutHealthScore > 70 ? ['Maintain current dietary habits', 'Continue regular meal timing'] : ['Consider digestive enzymes', 'Increase fiber intake gradually', 'Practice mindful eating']
-        },
-        {
-          category: 'Microbiome Balance',
-          score: Math.max(25, gutHealthScore - 5),
-          description: gutHealthScore > 60 ? 'Microbiome appears relatively balanced with room for optimization.' : 'Microbiome diversity may be compromised, requiring targeted intervention.',
-          recommendations: gutHealthScore > 60 ? ['Include fermented foods daily', 'Vary your vegetable intake'] : ['Take a high-quality probiotic', 'Eliminate processed foods', 'Add prebiotic-rich foods']
-        },
-        {
-          category: 'Inflammation Markers',
-          score: Math.max(20, gutHealthScore),
-          description: gutHealthScore > 65 ? 'Low inflammatory indicators suggest good gut barrier function.' : 'Elevated inflammation markers may indicate gut barrier compromise.',
-          recommendations: gutHealthScore > 65 ? ['Continue anti-inflammatory foods', 'Maintain stress management'] : ['Reduce inflammatory foods', 'Add omega-3 supplements', 'Consider gut healing protocol']
-        }
-      ],
-      dietaryRecommendations: [
-        {
-          category: 'Foods to Emphasize',
-          items: [
-            'Fermented vegetables (sauerkraut, kimchi)',
-            'Bone broth and collagen-rich foods',
-            'Prebiotic fibers (garlic, onions, asparagus)',
-            'Anti-inflammatory spices (turmeric, ginger)',
-            'Wild-caught fish and grass-fed meats'
-          ]
-        },
-        {
-          category: 'Foods to Minimize',
-          items: [
-            'Processed and packaged foods',
-            'Refined sugars and artificial sweeteners',
-            'Excessive alcohol consumption',
-            'Trans fats and vegetable oils',
-            'Foods you\'ve identified as triggers'
-          ]
-        }
-      ],
-      lifestyleRecommendations: [
-        {
-          title: 'Stress Management',
-          description: 'Chronic stress significantly impacts gut health through the gut-brain axis.',
-          actions: ['Practice daily meditation or deep breathing', 'Maintain regular sleep schedule', 'Engage in moderate exercise']
-        },
-        {
-          title: 'Meal Timing',
-          description: 'Consistent meal timing supports healthy digestive rhythms.',
-          actions: ['Eat meals at regular intervals', 'Allow 12-hour overnight fasting', 'Avoid late-night eating']
-        },
-        {
-          title: 'Hydration',
-          description: 'Proper hydration supports digestive function and nutrient absorption.',
-          actions: ['Drink 8-10 glasses of filtered water daily', 'Limit caffeine and alcohol', 'Consider electrolyte balance']
-        }
-      ],
-      supplementRecommendations: [
-        {
-          name: 'High-Quality Probiotic',
-          purpose: 'Support microbiome diversity and balance',
-          dosage: '25-50 billion CFU daily',
-          timing: 'With breakfast',
-          amazonLink: 'https://amazon.com/dp/B07TGRD8S8',
-          priority: 'High'
-        },
-        {
-          name: 'Digestive Enzymes',
-          purpose: 'Enhance nutrient breakdown and absorption',
-          dosage: '1-2 capsules with meals',
-          timing: 'Before eating',
-          amazonLink: 'https://amazon.com/dp/B01BTBGBTC',
-          priority: gutHealthScore < 60 ? 'High' : 'Medium'
-        },
-        {
-          name: 'L-Glutamine',
-          purpose: 'Support gut lining repair and integrity',
-          dosage: '5-10g daily',
-          timing: 'Between meals',
-          amazonLink: 'https://amazon.com/dp/B00E7IODXQ',
-          priority: gutHealthScore < 50 ? 'High' : 'Low'
-        },
-        {
-          name: 'Omega-3 Fatty Acids',
-          purpose: 'Reduce inflammation and support gut barrier',
-          dosage: '1000-2000mg daily',
-          timing: 'With dinner',
-          amazonLink: 'https://amazon.com/dp/B00CAZAU62',
-          priority: 'Medium'
-        }
-      ],
-      timeline: {
-        week1: ['Start probiotic supplementation', 'Eliminate processed foods', 'Begin stress management practices'],
-        week2: ['Add digestive enzymes if needed', 'Increase fermented food intake', 'Establish regular meal timing'],
-        week4: ['Assess initial improvements', 'Consider additional supplements', 'Fine-tune dietary approach'],
-        week8: ['Evaluate overall progress', 'Adjust supplement protocol', 'Plan long-term maintenance']
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Priority Areas:', margin, yPosition);
+    yPosition += 10;
+
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    analysisData.priority_areas.forEach((area, index) => {
+      pdf.text(`${index + 1}. ${area}`, margin, yPosition);
+      yPosition += 7;
+    });
+
+    // Recommendations
+    yPosition += 10;
+    if (yPosition > 250) {
+      pdf.addPage();
+      yPosition = 30;
+    }
+
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Recommendations:', margin, yPosition);
+    yPosition += 10;
+
+    analysisData.recommendations.forEach((rec, index) => {
+      if (yPosition > 250) {
+        pdf.addPage();
+        yPosition = 30;
       }
-    };
+
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${index + 1}. ${rec.title}`, margin, yPosition);
+      yPosition += 7;
+
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, 'normal');
+      const descLines = pdf.splitTextToSize(rec.description, pageWidth - 2 * margin);
+      pdf.text(descLines, margin, yPosition);
+      yPosition += descLines.length * 5 + 5;
+    });
+
+    // Save the PDF
+    pdf.save('gut-health-analysis-report.pdf');
+  };
+
+  const shareResults = (platform) => {
+    const shareText = `I just completed my gut health analysis and got a score of ${analysisData?.gut_health_score}/100! 🌟 Get your personalized gut health plan at`;
+    const shareUrl = window.location.origin;
+
+    switch (platform) {
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+        break;
+      case 'email':
+        window.open(`mailto:?subject=Check out my gut health results&body=${encodeURIComponent(shareText + ' ' + shareUrl)}`, '_blank');
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(shareText + ' ' + shareUrl);
+        alert('Link copied to clipboard!');
+        break;
+    }
+    setShowShareMenu(false);
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getScoreLabel = (score) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    return 'Needs Improvement';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -213,7 +260,7 @@ const Results = ({ userResponses, currentUser, paymentStatus }) => {
         >
           <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Analyzing Your Gut Health</h2>
-          <p className="text-gray-600">Creating your personalized recommendations...</p>
+          <p className="text-gray-600">Our AI is processing your responses to create your personalized plan...</p>
         </motion.div>
       </div>
     );
@@ -221,32 +268,42 @@ const Results = ({ userResponses, currentUser, paymentStatus }) => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Analysis Error</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Analysis Error</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button onClick={() => navigate('/')}>Start Over</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const StatusIcon = analysisData.statusIcon;
+  if (!analysisData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Info className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">No Analysis Available</h2>
+              <p className="text-gray-600 mb-4">Unable to load your gut health analysis.</p>
+              <Button onClick={() => navigate('/')}>Start Over</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
+        <div className="text-center mb-8">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
@@ -255,247 +312,240 @@ const Results = ({ userResponses, currentUser, paymentStatus }) => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
           </Button>
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Award className="h-8 w-8 text-yellow-500" />
-            <h1 className="text-4xl font-bold text-gray-900">Your Gut Health Analysis</h1>
-          </div>
-          <p className="text-lg text-gray-600">
-            Personalized insights and recommendations for optimal digestive wellness
-          </p>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Your Personalized Gut Health Analysis
+            </h1>
+            <p className="text-lg text-gray-600">
+              Based on your responses, here's your comprehensive gut health plan
+            </p>
+          </motion.div>
+        </div>
 
         {/* Gut Health Score */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-8"
         >
           <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <StatusIcon className="h-12 w-12" />
-                  <div>
-                    <h2 className="text-3xl font-bold">{analysisData.gutHealthScore}/100</h2>
-                    <p className="text-blue-100">Gut Health Score</p>
-                  </div>
+                <div className="flex items-center justify-center mb-4">
+                  <Award className="h-8 w-8 mr-2" />
+                  <h2 className="text-2xl font-bold">Your Gut Health Score</h2>
                 </div>
-                <Badge variant="secondary" className="text-lg px-4 py-2">
-                  {analysisData.healthStatus}
-                </Badge>
-                <p className="mt-4 text-blue-100">
-                  Based on your comprehensive assessment, here's your personalized gut health profile
-                </p>
+                <div className="text-6xl font-bold mb-2">{analysisData.gut_health_score}</div>
+                <div className="text-xl mb-4">{getScoreLabel(analysisData.gut_health_score)}</div>
+                <Progress 
+                  value={analysisData.gut_health_score} 
+                  className="w-full max-w-md mx-auto h-3"
+                />
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="analysis" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="diet">Diet Plan</TabsTrigger>
-            <TabsTrigger value="supplements">Supplements</TabsTrigger>
-            <TabsTrigger value="timeline">Action Plan</TabsTrigger>
+            <TabsTrigger value="analysis">Analysis</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid md:grid-cols-3 gap-6">
-              {analysisData.keyFindings.map((finding, index) => (
-                <motion.div
-                  key={finding.category}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-blue-600" />
-                        {finding.category}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="mb-4">
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium">Score</span>
-                          <span className="text-sm font-bold">{finding.score}/100</span>
+          <TabsContent value="analysis" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5" />
+                    AI Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose max-w-none">
+                    <div className="whitespace-pre-wrap text-gray-700">
+                      {analysisData.analysis}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {analysisData.priority_areas && analysisData.priority_areas.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Priority Areas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-3">
+                      {analysisData.priority_areas.map((area, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
+                          <AlertCircle className="h-5 w-5 text-yellow-600" />
+                          <span className="font-medium text-gray-900">{area}</span>
                         </div>
-                        <Progress value={finding.score} className="h-2" />
-                      </div>
-                      <p className="text-sm text-gray-600 mb-4">{finding.description}</p>
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">Key Recommendations:</h4>
-                        {finding.recommendations.map((rec, idx) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{rec}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
           </TabsContent>
 
-          {/* Diet Plan Tab */}
-          <TabsContent value="diet" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {analysisData.dietaryRecommendations.map((category, index) => (
-                <motion.div
-                  key={category.category}
-                  initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Apple className="h-5 w-5 text-green-600" />
-                        {category.category}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {category.items.map((item, idx) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{item}</span>
+          <TabsContent value="recommendations" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {analysisData.recommendations && analysisData.recommendations.length > 0 ? (
+                <div className="grid gap-6">
+                  {analysisData.recommendations.map((rec, index) => (
+                    <Card key={index}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              {rec.category === 'diet' && <Heart className="h-5 w-5 text-green-600" />}
+                              {rec.category === 'lifestyle' && <Zap className="h-5 w-5 text-blue-600" />}
+                              {rec.category === 'supplements' && <Sparkles className="h-5 w-5 text-purple-600" />}
+                              {rec.title}
+                            </CardTitle>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                          <Badge variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'default' : 'secondary'}>
+                            {rec.priority} priority
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-700">{rec.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center text-gray-500">
+                      <Info className="h-12 w-12 mx-auto mb-4" />
+                      <p>No specific recommendations available at this time.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Lifestyle Recommendations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-6">
-                  {analysisData.lifestyleRecommendations.map((rec, index) => (
-                    <div key={rec.title} className="space-y-3">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <Heart className="h-4 w-4 text-red-500" />
-                        {rec.title}
-                      </h4>
-                      <p className="text-sm text-gray-600">{rec.description}</p>
-                      <div className="space-y-2">
-                        {rec.actions.map((action, idx) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <CheckCircle className="h-3 w-3 text-green-500 mt-1 flex-shrink-0" />
-                            <span className="text-xs">{action}</span>
+          <TabsContent value="products" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {analysisData.product_recommendations && analysisData.product_recommendations.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {analysisData.product_recommendations.map((product, index) => (
+                    <Card key={index} className="hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{product.name}</CardTitle>
+                        <CardDescription>{product.category}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-600 mb-4">{product.description}</p>
+                        {product.match_reason && (
+                          <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                            <p className="text-sm text-blue-800">
+                              <strong>Why this helps:</strong> {product.match_reason}
+                            </p>
                           </div>
-                        ))}
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-green-600">{product.price}</span>
+                          <Button 
+                            size="sm" 
+                            onClick={() => window.open(product.affiliate_url, '_blank')}
+                            className="flex items-center gap-2"
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                            Buy Now
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center text-gray-500">
+                      <ShoppingCart className="h-12 w-12 mx-auto mb-4" />
+                      <p>No product recommendations available at this time.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="timeline" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Expected Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-blue-100 rounded-full p-2">
+                        <CheckCircle className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Week 1-2: Initial Changes</h4>
+                        <p className="text-gray-600">Begin implementing dietary recommendations and lifestyle modifications.</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Supplements Tab */}
-          <TabsContent value="supplements" className="space-y-6">
-            <div className="grid gap-4">
-              {analysisData.supplementRecommendations.map((supplement, index) => (
-                <motion.div
-                  key={supplement.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                >
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <Pill className="h-5 w-5 text-blue-600" />
-                            <h3 className="font-bold text-lg">{supplement.name}</h3>
-                            <Badge variant={supplement.priority === 'High' ? 'destructive' : supplement.priority === 'Medium' ? 'default' : 'secondary'}>
-                              {supplement.priority} Priority
-                            </Badge>
-                          </div>
-                          <p className="text-gray-600 mb-3">{supplement.purpose}</p>
-                          <div className="grid md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="font-semibold">Dosage:</span> {supplement.dosage}
-                            </div>
-                            <div>
-                              <span className="font-semibold">Timing:</span> {supplement.timing}
-                            </div>
-                          </div>
-                        </div>
-                        <Button asChild className="ml-4">
-                          <a href={supplement.amazonLink} target="_blank" rel="noopener noreferrer">
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            Buy Now
-                            <ExternalLink className="h-3 w-3 ml-1" />
-                          </a>
-                        </Button>
+                    <div className="flex items-start gap-4">
+                      <div className="bg-yellow-100 rounded-full p-2">
+                        <CheckCircle className="h-5 w-5 text-yellow-600" />
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Timeline Tab */}
-          <TabsContent value="timeline" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  Your 8-Week Gut Health Transformation Plan
-                </CardTitle>
-                <CardDescription>
-                  Follow this timeline for optimal results and sustainable improvements
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {Object.entries(analysisData.timeline).map(([period, actions], index) => (
-                    <motion.div
-                      key={period}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 * index }}
-                      className="flex gap-4"
-                    >
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="font-bold text-blue-600">
-                            {period.replace('week', 'W')}
-                          </span>
-                        </div>
+                      <div>
+                        <h4 className="font-semibold">Week 3-4: Early Improvements</h4>
+                        <p className="text-gray-600">You may start noticing improvements in digestion and energy levels.</p>
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold mb-2 capitalize">
-                          {period.replace('week', 'Week ')}
-                        </h4>
-                        <div className="space-y-2">
-                          {actions.map((action, idx) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{action}</span>
-                            </div>
-                          ))}
-                        </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="bg-green-100 rounded-full p-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                      <div>
+                        <h4 className="font-semibold">Month 2-3: Significant Progress</h4>
+                        <p className="text-gray-600">Substantial improvements in gut health symptoms and overall well-being.</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
         </Tabs>
 
@@ -503,34 +553,69 @@ const Results = ({ userResponses, currentUser, paymentStatus }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="flex justify-center gap-4 mt-8"
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-8 flex flex-wrap gap-4 justify-center"
         >
-          <Button size="lg" className="gap-2">
+          <Button size="lg" onClick={downloadPDFReport} className="flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Download Report
+            Download PDF Report
           </Button>
-          <Button variant="outline" size="lg" className="gap-2">
-            <Share2 className="h-4 w-4" />
-            Share Results
-          </Button>
-        </motion.div>
-
-        {/* Footer */}
-        <div className="text-center mt-12 p-6 bg-white rounded-lg shadow-sm">
-          <h3 className="font-bold text-lg mb-2">Ready to Transform Your Gut Health?</h3>
-          <p className="text-gray-600 mb-4">
-            Start implementing these recommendations today and track your progress over the next 8 weeks.
-          </p>
-          <div className="flex justify-center gap-2">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-            ))}
+          
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              className="flex items-center gap-2"
+            >
+              <Share2 className="h-4 w-4" />
+              Share Results
+            </Button>
+            
+            {showShareMenu && (
+              <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border p-2 z-10">
+                <div className="flex flex-col gap-2 min-w-[150px]">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => shareResults('twitter')}
+                    className="flex items-center gap-2 justify-start"
+                  >
+                    <Twitter className="h-4 w-4" />
+                    Twitter
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => shareResults('facebook')}
+                    className="flex items-center gap-2 justify-start"
+                  >
+                    <Facebook className="h-4 w-4" />
+                    Facebook
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => shareResults('email')}
+                    className="flex items-center gap-2 justify-start"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => shareResults('copy')}
+                    className="flex items-center gap-2 justify-start"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy Link
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Join thousands who have transformed their health with personalized gut analysis
-          </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

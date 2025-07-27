@@ -1,27 +1,66 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { useState } from 'react'
-import LandingPage from './components/LandingPage'
-import Questionnaire from './components/Questionnaire'
-import Payment from './components/Payment'
-import Results from './components/Results'
-import AdminPanel from './components/AdminPanel'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
+import Questionnaire from './components/Questionnaire';
+import Payment from './components/Payment';
+import Results from './components/Results';
+import AdminPanel from './components/AdminPanel';
+import './App.css';
 
 function App() {
-  const [userResponses, setUserResponses] = useState({})
-  const [currentUser, setCurrentUser] = useState(null)
-  const [paymentStatus, setPaymentStatus] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userResponses, setUserResponses] = useState({});
+  const [paymentStatus, setPaymentStatus] = useState(false);
+
+  useEffect(() => {
+    // Check for existing user session
+    const savedUser = localStorage.getItem('currentUser');
+    const savedResponses = localStorage.getItem('userResponses');
+    const savedPaymentStatus = localStorage.getItem('paymentStatus');
+    
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+    if (savedResponses) {
+      setUserResponses(JSON.parse(savedResponses));
+    }
+    if (savedPaymentStatus) {
+      setPaymentStatus(JSON.parse(savedPaymentStatus));
+    }
+  }, []);
+
+  const handleUserRegistration = (userData) => {
+    setCurrentUser(userData);
+    localStorage.setItem('currentUser', JSON.stringify(userData));
+  };
+
+  const handleQuestionnaireComplete = (responses) => {
+    setUserResponses(responses);
+    localStorage.setItem('userResponses', JSON.stringify(responses));
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentStatus(true);
+    localStorage.setItem('paymentStatus', JSON.stringify(true));
+    
+    // Update user payment status
+    if (currentUser) {
+      const updatedUser = { ...currentUser, has_paid: true };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    }
+  };
 
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+      <div className="App">
         <Routes>
           <Route 
             path="/" 
             element={
               <LandingPage 
+                onUserRegistration={handleUserRegistration}
                 currentUser={currentUser}
-                setCurrentUser={setCurrentUser}
               />
             } 
           />
@@ -29,9 +68,9 @@ function App() {
             path="/questionnaire" 
             element={
               <Questionnaire 
-                userResponses={userResponses}
-                setUserResponses={setUserResponses}
                 currentUser={currentUser}
+                onComplete={handleQuestionnaireComplete}
+                userResponses={userResponses}
               />
             } 
           />
@@ -39,9 +78,9 @@ function App() {
             path="/payment" 
             element={
               <Payment 
-                userResponses={userResponses}
                 currentUser={currentUser}
-                setPaymentStatus={setPaymentStatus}
+                userResponses={userResponses}
+                onPaymentSuccess={handlePaymentSuccess}
               />
             } 
           />
@@ -49,8 +88,8 @@ function App() {
             path="/results" 
             element={
               <Results 
-                userResponses={userResponses}
                 currentUser={currentUser}
+                userResponses={userResponses}
                 paymentStatus={paymentStatus}
               />
             } 
@@ -59,11 +98,12 @@ function App() {
             path="/admin" 
             element={<AdminPanel />} 
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;
 
